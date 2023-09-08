@@ -14,7 +14,7 @@ fn decode_bencoded_value(encoded_value: &str) -> serde_json::Value {
     if encoded_value.chars().next().unwrap().is_digit(10) {
         // Example: "5:hello" -> "5"
         let colon_index = encoded_value.find(':').unwrap();
-        println!("colon_index: {}", colon_index);
+        // println!("colon_index: {}", colon_index);
 
         let number_string = &encoded_value[..colon_index];
         let number = number_string.parse::<i64>().unwrap();
