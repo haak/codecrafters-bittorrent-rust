@@ -1,10 +1,12 @@
 use serde_json;
 use std::env;
 
+// run with cargo run decode 5:hello
+
 // Available if you need it!
 // use serde_bencode
 
-#[allow(dead_code)]
+// #[allow(dead_code)]
 fn decode_bencoded_value(encoded_value: &str) -> serde_json::Value {
     // If encoded_value starts with a digit, it's a number
     if encoded_value.chars().next().unwrap().is_digit(10) {
@@ -29,9 +31,9 @@ fn main() {
         println!("Logs from your program will appear here!");
 
         // Uncomment this block to pass the first stage
-        // let encoded_value = &args[2];
-        // let decoded_value = decode_bencoded_value(encoded_value);
-        // println!("{}", decoded_value.to_string());
+        let encoded_value = &args[2];
+        let decoded_value = decode_bencoded_value(encoded_value);
+        println!("{}", decoded_value.to_string());
     } else {
         println!("unknown command: {}", args[1])
     }
