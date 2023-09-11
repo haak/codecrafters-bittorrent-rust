@@ -12,24 +12,35 @@ fn decode_bencoded_value(encoded_value: &str) -> serde_json::Value {
     // println!("encoded_value: {}", encoded_value);
     // i52e
     if encoded_value.chars().next().unwrap().is_digit(10) {
-        // Example: "5:hello" -> "5"
-        let colon_index = encoded_value.find(':').unwrap();
-        // println!("colon_index: {}", colon_index);
+        let string = handle_string(encoded_value);
 
-        let number_string = &encoded_value[..colon_index];
-        let number = number_string.parse::<i64>().unwrap();
-        let string = &encoded_value[colon_index + 1..colon_index + 1 + number as usize];
         return serde_json::Value::String(string.to_string());
     } else if encoded_value.chars().next().unwrap() == 'i' {
-        // Example: "i52e" -> "52"
-        // extract number and check if there is an e after
-        let end_index = encoded_value.find('e').unwrap();
-        let number_string = &encoded_value[1..end_index];
-        let number = number_string.parse::<i64>().unwrap();
+        let number = handle_number(encoded_value);
         return serde_json::Value::Number(serde_json::Number::from(number));
+    } else if encoded_value.chars().next().unwrap() == 'l' {
+        panic!("Unhandled encoded value: {}", encoded_value);
+        // while loop until chars.next returns nothing
+        // need to split up the string before parsing each section.
     } else {
         panic!("Unhandled encoded value: {}", encoded_value)
     }
+}
+
+fn handle_string(encoded_value: &str) -> &str {
+    let colon_index = encoded_value.find(':').unwrap();
+    let number_string = &encoded_value[..colon_index];
+    let number = number_string.parse::<i64>().unwrap();
+    let string = &encoded_value[colon_index + 1..colon_index + 1 + number as usize];
+    // println!("{}", string);
+    return string;
+}
+
+fn handle_number(encoded_value: &str) -> i64 {
+    let end_index = encoded_value.find('e').unwrap();
+    let number_string = &encoded_value[1..end_index];
+    let number = number_string.parse::<i64>().unwrap();
+    return number;
 }
 
 // Usage: your_bittorrent.sh decode "<encoded_value>"
