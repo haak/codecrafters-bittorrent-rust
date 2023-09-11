@@ -7,40 +7,46 @@ use std::env;
 // use serde_bencode
 
 // #[allow(dead_code)]
-fn decode_bencoded_value(encoded_value: &str) -> serde_json::Value {
-    // If encoded_value starts with a digit, it's a number
+fn decode_bencoded_value(encoded_value: &str) -> (serde_json::Value, &str) {
     // println!("encoded_value: {}", encoded_value);
-    // i52e
     if encoded_value.chars().next().unwrap().is_digit(10) {
-        let string = handle_string(encoded_value);
+        let (string, remaining) = handle_string(encoded_value);
 
-        return serde_json::Value::String(string.to_string());
+        return (serde_json::Value::String(string.to_string()), remaining);
     } else if encoded_value.chars().next().unwrap() == 'i' {
-        let number = handle_number(encoded_value);
-        return serde_json::Value::Number(serde_json::Number::from(number));
+        let (number, remaining) = handle_number(encoded_value);
+        return (serde_json::Value::Number(number.into()), remaining);
     } else if encoded_value.chars().next().unwrap() == 'l' {
-        panic!("Unhandled encoded value: {}", encoded_value);
-        // while loop until chars.next returns nothing
-        // need to split up the string before parsing each section.
+        // println!("encoded_value: {}", encoded_value);
+        let mut values = Vec::new();
+        let mut rest = &encoded_value[1..];
+        while rest.chars().next().unwrap() != 'e' {
+            let (value, remaining) = decode_bencoded_value(rest);
+            values.push(value);
+            rest = remaining;
+        }
+
+        return (serde_json::Value::Array(values), rest);
     } else {
         panic!("Unhandled encoded value: {}", encoded_value)
     }
 }
 
-fn handle_string(encoded_value: &str) -> &str {
+fn handle_string(encoded_value: &str) -> (&str, &str) {
     let colon_index = encoded_value.find(':').unwrap();
     let number_string = &encoded_value[..colon_index];
     let number = number_string.parse::<i64>().unwrap();
     let string = &encoded_value[colon_index + 1..colon_index + 1 + number as usize];
-    // println!("{}", string);
-    return string;
+    let remaining = &encoded_value[colon_index + 1 + number as usize..];
+    return (string, remaining);
 }
 
-fn handle_number(encoded_value: &str) -> i64 {
+fn handle_number(encoded_value: &str) -> (i64, &str) {
     let end_index = encoded_value.find('e').unwrap();
     let number_string = &encoded_value[1..end_index];
     let number = number_string.parse::<i64>().unwrap();
-    return number;
+    let remaining = &encoded_value[end_index + 1..];
+    return (number, remaining);
 }
 
 // Usage: your_bittorrent.sh decode "<encoded_value>"
@@ -54,7 +60,7 @@ fn main() {
 
         // Uncomment this block to pass the first stage
         let encoded_value = &args[2];
-        let decoded_value = decode_bencoded_value(encoded_value);
+        let decoded_value = decode_bencoded_value(encoded_value).0;
         println!("{}", decoded_value.to_string());
     } else {
         println!("unknown command: {}", args[1])
@@ -67,9 +73,16 @@ mod tests {
 
     #[test]
     fn test_decode_bencode_value() {
-        assert_eq!(decode_bencoded_value("5:hello"), "hello");
-        assert_eq!(decode_bencoded_value("1:s"), "s");
-        assert_eq!(decode_bencoded_value("i52e"), 52);
-        assert_eq!(decode_bencoded_value("i3e"), 3);
+        assert_eq!(decode_bencoded_value("5:hello").0, "hello");
+        assert_eq!(decode_bencoded_value("1:s").0, "s");
+        assert_eq!(decode_bencoded_value("i52e").0, 52);
+        assert_eq!(decode_bencoded_value("i3e").0, 3);
+        // let mut values = Vec::new();
+        // values.push("hello");
+        // values.push(52.to_string());
+        // assert_eq!(
+        // decode_bencoded_value("l5:helloi52ee").0,
+        // serde_json::Value::Array(values)
+        // );
     }
 }
