@@ -16,7 +16,6 @@ fn decode_bencoded_value(encoded_value: &str) -> (serde_json::Value, &str) {
     } else if encoded_value.chars().next().unwrap() == 'i' {
         let (number, remaining) = handle_number(encoded_value);
         return (serde_json::Value::Number(number.into()), remaining);
-
     } else if encoded_value.chars().next().unwrap() == 'l' {
         // println!("encoded_value: {}", encoded_value);
         let mut values = Vec::new();
@@ -31,7 +30,7 @@ fn decode_bencoded_value(encoded_value: &str) -> (serde_json::Value, &str) {
     } else if encoded_value.chars().next().unwrap() == 'd' {
         let mut map = serde_json::Map::new();
         let mut rest = &encoded_value[1..];
-        // println!("rest: {}", rest); 
+        // println!("rest: {}", rest);
         while rest.chars().next().unwrap() != 'e' {
             let (key, remaining) = decode_bencoded_value(rest);
             let (value, remaining) = decode_bencoded_value(remaining);
