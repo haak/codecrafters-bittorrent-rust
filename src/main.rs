@@ -17,30 +17,25 @@ fn decode_bencoded_value(encoded_value: &str) -> (serde_json::Value, &str) {
         let (number, remaining) = handle_number(encoded_value);
         return (serde_json::Value::Number(number.into()), remaining);
     } else if encoded_value.chars().next().unwrap() == 'l' {
-        // println!("encoded_value: {}", encoded_value);
-        let mut values = Vec::new();
-        let mut rest = &encoded_value[1..];
-        while rest.chars().next().unwrap() != 'e' {
-            let (value, remaining) = decode_bencoded_value(rest);
-            values.push(value);
-            rest = remaining;
-        }
+        let (values, remaining) = handle_list(encoded_value);
 
-        return (serde_json::Value::Array(values), rest);
+        return (serde_json::Value::Array(values), remaining);
     } else if encoded_value.chars().next().unwrap() == 'd' {
-        let mut map = serde_json::Map::new();
-        let mut rest = &encoded_value[1..];
-        // println!("rest: {}", rest);
-        while rest.chars().next().unwrap() != 'e' {
-            let (key, remaining) = decode_bencoded_value(rest);
-            let (value, remaining) = decode_bencoded_value(remaining);
-            // println!("key: {}", key);
-            // println!("value: {}", value);
-            // let mut map = map.clone();
-            map.insert(key.to_string(), value);
-            rest = remaining;
-        }
-        return (serde_json::Value::Object(map), rest);
+        let (map, rest) = handle_dictionary(encoded_value);
+
+        // let mut map = serde_json::Map::new();
+        // let mut rest = &encoded_value[1..];
+        // // println!("rest: {}", rest);
+        // while rest.chars().next().unwrap() != 'e' {
+        //     let (key, remaining) = decode_bencoded_value(rest);
+        //     let (value, remaining) = decode_bencoded_value(remaining);
+        //     // println!("key: {}", key);
+        //     // println!("value: {}", value);
+        //     // let mut map = map.clone();
+        //     map.insert(key.to_string(), value);
+        //     rest = remaining;
+        // }
+        return (map, rest);
         // println!("encoded_value: {}", encoded_value);
         // return (serde_json::Value::Null, encoded_value);
     } else {
@@ -65,6 +60,34 @@ fn handle_number(encoded_value: &str) -> (i64, &str) {
     return (number, remaining);
 }
 
+fn handle_list(encoded_value: &str) -> (Vec<serde_json::Value>, &str) {
+    let mut values = Vec::new();
+    let mut rest = &encoded_value[1..];
+    while rest.chars().next().unwrap() != 'e' {
+        let (value, remaining) = decode_bencoded_value(rest);
+        values.push(value);
+        rest = remaining;
+    }
+
+    return (values, rest);
+}
+
+fn handle_dictionary(encoded_value: &str) -> (serde_json::Value, &str) {
+    let mut map = serde_json::Map::new();
+    let mut rest = &encoded_value[1..];
+    while rest.chars().next().unwrap() != 'e' {
+        let (key, remaining) = decode_bencoded_value(rest);
+        let (value, remaining) = decode_bencoded_value(remaining);
+        map.insert(key.as_str().unwrap().to_string(), value);
+        rest = remaining;
+    }
+    println!(
+        "map: {}",
+        serde_json::Value::Object(map.clone()).to_string()
+    );
+    return (serde_json::Value::Object(map), rest);
+}
+
 // Usage: your_bittorrent.sh decode "<encoded_value>"
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -85,7 +108,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use crate::decode_bencoded_value;
+    use super::*;
+    use serde_json::json;
 
     #[test]
     fn test_decode_bencode_value() {
@@ -93,12 +117,13 @@ mod tests {
         assert_eq!(decode_bencoded_value("1:s").0, "s");
         assert_eq!(decode_bencoded_value("i52e").0, 52);
         assert_eq!(decode_bencoded_value("i3e").0, 3);
-        // let mut values = Vec::new();
-        // values.push("hello");
-        // values.push(52.to_string());
-        // assert_eq!(
-        // decode_bencoded_value("l5:helloi52ee").0,
-        // serde_json::Value::Array(values)
-        // );
+        assert_eq!(
+            decode_bencoded_value("l5:helloi52ee").0,
+            json!(["hello", 52])
+        );
+        assert_eq!(
+            decode_bencoded_value("d3:foo3:bar5:helloi52ee").0,
+            json!({"foo": "bar", "hello": 52})
+        );
     }
 }
