@@ -81,10 +81,6 @@ fn handle_dictionary(encoded_value: &str) -> (serde_json::Value, &str) {
         map.insert(key.as_str().unwrap().to_string(), value);
         rest = remaining;
     }
-    println!(
-        "map: {}",
-        serde_json::Value::Object(map.clone()).to_string()
-    );
     return (serde_json::Value::Object(map), rest);
 }
 
@@ -125,5 +121,7 @@ mod tests {
             decode_bencoded_value("d3:foo3:bar5:helloi52ee").0,
             json!({"foo": "bar", "hello": 52})
         );
+
+        assert_eq!(decode_bencoded_value("de").0, json!({}));
     }
 }
