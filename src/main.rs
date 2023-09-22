@@ -1,5 +1,5 @@
 use serde_json;
-use std::env;
+use std::{env, fs};
 
 // run with cargo run decode 5:hello
 
@@ -23,21 +23,7 @@ fn decode_bencoded_value(encoded_value: &str) -> (serde_json::Value, &str) {
     } else if encoded_value.chars().next().unwrap() == 'd' {
         let (map, rest) = handle_dictionary(encoded_value);
 
-        // let mut map = serde_json::Map::new();
-        // let mut rest = &encoded_value[1..];
-        // // println!("rest: {}", rest);
-        // while rest.chars().next().unwrap() != 'e' {
-        //     let (key, remaining) = decode_bencoded_value(rest);
-        //     let (value, remaining) = decode_bencoded_value(remaining);
-        //     // println!("key: {}", key);
-        //     // println!("value: {}", value);
-        //     // let mut map = map.clone();
-        //     map.insert(key.to_string(), value);
-        //     rest = remaining;
-        // }
         return (map, rest);
-        // println!("encoded_value: {}", encoded_value);
-        // return (serde_json::Value::Null, encoded_value);
     } else {
         panic!("Unhandled encoded value: {}", encoded_value)
     }
@@ -84,22 +70,60 @@ fn handle_dictionary(encoded_value: &str) -> (serde_json::Value, &str) {
     return (serde_json::Value::Object(map), rest);
 }
 
+#[derive(Debug)]
+struct Torrent {
+    announce: String,
+    length: u64,
+}
+
+fn decode_torrent(encoded_torrent: &str) -> Torrent {
+    let decoded = decode_bencoded_value(&encoded_torrent);
+    let obj = decoded.0.as_object().unwrap();
+    return Torrent {
+        announce: obj.get("announce").unwrap().as_str().unwrap().to_string(),
+        length: obj
+            .get("info")
+            .unwrap()
+            .get("length")
+            .unwrap()
+            .as_u64()
+            .unwrap(),
+    };
+}
+
 // Usage: your_bittorrent.sh decode "<encoded_value>"
 fn main() {
     let args: Vec<String> = env::args().collect();
     let command = &args[1];
 
     if command == "decode" {
-        // You can use print statements as follows for debugging, they'll be visible when running tests.
-        // println!("Logs from your program will appear here!");
-
-        // Uncomment this block to pass the first stage
         let encoded_value = &args[2];
         let decoded_value = decode_bencoded_value(encoded_value).0;
         println!("{}", decoded_value.to_string());
+    } else if command == "info" {
+        // let parsed_file = handle_torrent_file(&args[2]);
+        // println!("{}", parsed_file.to_string());
+        let file_path = &args[2];
+        let file = fs::read(file_path).unwrap();
+        let content = unsafe { String::from_utf8_unchecked(file) };
+        let torrent = decode_torrent(&content);
+        println!("Tracker URL: {}", torrent.announce);
+        println!("Length: {}", torrent.length);
     } else {
         println!("unknown command: {}", args[1])
     }
+}
+
+fn decode_command(encoded_value: &str) -> serde_json::Value {
+    let decoded_value = decode_bencoded_value(encoded_value).0;
+    return decoded_value;
+}
+
+fn info_command(file_path: &str) -> Torrent {
+    let file = fs::read(file_path).unwrap();
+    let content = unsafe { String::from_utf8_unchecked(file) };
+    let torrent = decode_torrent(&content);
+    return torrent;
 }
 
 #[cfg(test)]
