@@ -1,12 +1,6 @@
 use serde_json;
 use std::{env, fs};
 
-// run with cargo run decode 5:hello
-
-// Available if you need it!
-// use serde_bencode
-
-// #[allow(dead_code)]
 fn decode_bencoded_value(encoded_value: &str) -> (serde_json::Value, &str) {
     // println!("encoded_value: {}", encoded_value);
     if encoded_value.chars().next().unwrap().is_digit(10) {
@@ -91,29 +85,6 @@ fn decode_torrent(encoded_torrent: &str) -> Torrent {
     };
 }
 
-// Usage: your_bittorrent.sh decode "<encoded_value>"
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    let command = &args[1];
-
-    if command == "decode" {
-        let encoded_value = &args[2];
-        let decoded_value = decode_bencoded_value(encoded_value).0;
-        println!("{}", decoded_value.to_string());
-    } else if command == "info" {
-        // let parsed_file = handle_torrent_file(&args[2]);
-        // println!("{}", parsed_file.to_string());
-        let file_path = &args[2];
-        let file = fs::read(file_path).unwrap();
-        let content = unsafe { String::from_utf8_unchecked(file) };
-        let torrent = decode_torrent(&content);
-        println!("Tracker URL: {}", torrent.announce);
-        println!("Length: {}", torrent.length);
-    } else {
-        println!("unknown command: {}", args[1])
-    }
-}
-
 fn decode_command(encoded_value: &str) -> serde_json::Value {
     let decoded_value = decode_bencoded_value(encoded_value).0;
     return decoded_value;
@@ -124,6 +95,27 @@ fn info_command(file_path: &str) -> Torrent {
     let content = unsafe { String::from_utf8_unchecked(file) };
     let torrent = decode_torrent(&content);
     return torrent;
+}
+
+// Usage: your_bittorrent.sh decode "<encoded_value>"
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let command = &args[1];
+
+    match command.as_str() {
+        "decode" => {
+            let encoded_value = &args[2];
+            let decoded_value = decode_command(encoded_value);
+            println!("{}", decoded_value);
+        }
+        "info" => {
+            let file_path = &args[2];
+            let torrent = info_command(file_path);
+            println!("Tracker URL: {}", torrent.announce);
+            println!("Length: {}", torrent.length);
+        }
+        _ => println!("unknown command: {}", command),
+    }
 }
 
 #[cfg(test)]
